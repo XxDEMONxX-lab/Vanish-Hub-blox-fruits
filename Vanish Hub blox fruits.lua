@@ -1,550 +1,539 @@
 --[[
-    ╔══════════════════════════════════════════════════════════════╗
-    ║                                                              ║
-    ║              🔥 BLOX FRUITS ULTIMATE HUB 🔥                 ║
-    ║                   By: Kyriel Scripts                         ║
-    ║                                                              ║
-    ║  Features:                                                   ║
-    ║  • Auto Farm (Quest + NPC)                                   ║
-    ║  • Aimbot / Silent Aim                                       ║
-    ║  • Fruit Notifier & Sniper                                   ║
-    ║  • Auto Raid & Dungeon                                       ║
-    ║  • Race V4 Auto                                              ║
-    ║  • Teleport Hub                                              ║
-    ║  • ESP (Players, Fruits, Chests, NPCs)                       ║
-    ║  • Kill Aura                                                 ║
-    ║  • Auto Stats                                                ║
-    ║  • And more...                                               ║
-    ║                                                              ║
-    ╚══════════════════════════════════════════════════════════════╝
+    ====================================================
+    VANISH HUB | BLOX FRUITS
+    UI Library: Elerium UI Library V2
+    Features: Auto Farm, Boss Farm, Fruit Gacha, Chest Farm,
+              Auto Stats, World Teleports, ESP, Character Mods,
+              and Integrated Anti-AFK
+    ====================================================
 --]]
 
--- ============================================================
---  LOADING & SETUP
--- ============================================================
+-- Load Elerium UI Library
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/memejames/elerium-v2-ui-library/main/Library", true))()
+
+-- Create Main Window
+local window = library:AddWindow("Vanish Hub | Blox Fruits", {
+    main_color = Color3.fromRGB(138, 43, 226), -- Signature Purple Theme
+    min_size = Vector2.new(500, 380),
+    toggle_key = Enum.KeyCode.RightControl,
+    can_resize = true,
+})
+
+---------------------------------------------------------
+-- FLOATING MINIMIZE / TOGGLE BUTTON GUI (PC & MOBILE)
+---------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+local ToggleButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+ScreenGui.Name = "VanishHubMobileToggle"
+ScreenGui.Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+ToggleButton.BorderColor3 = Color3.fromRGB(138, 43, 226)
+ToggleButton.Position = UDim2.new(0, 15, 0.4, 0)
+ToggleButton.Size = UDim2.new(0, 110, 0, 38)
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "Vanish Hub"
+ToggleButton.TextColor3 = Color3.fromRGB(138, 43, 226)
+ToggleButton.TextSize = 15.000
+ToggleButton.Active = true
+ToggleButton.Draggable = true
+
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = ToggleButton
+
+-- Minimize/Maximize Trigger
+ToggleButton.MouseButton1Click:Connect(function()
+    local vim = game:GetService("VirtualInputManager")
+    vim:SendKeyEvent(true, Enum.KeyCode.RightControl, false, game)
+    vim:SendKeyEvent(false, Enum.KeyCode.RightControl, false, game)
+end)
+
+---------------------------------------------------------
+-- GLOBAL VARIABLES & SERVICES
+---------------------------------------------------------
+_G.AutoFarmLevel = false
+_G.AutoFastAttack = false
+_G.AutoCollectFruits = false
+_G.AutoChestFarm = false
+_G.AutoBossFarm = false
+_G.AutoStoreFruits = false
+_G.AutoBusoHaki = false
+
+_G.AutoStatsMelee = false
+_G.AutoStatsDefense = false
+_G.AutoStatsSword = false
+_G.AutoStatsGun = false
+_G.AutoStatsFruit = false
+
+_G.PlayerESP = false
+_G.FruitESP = false
+_G.ChestESP = false
+
+_G.InfiniteEnergy = false
+_G.NoClip = false
+_G.InfiniteJump = false
+_G.WaterWalk = false
+_G.FullBright = false
+
+_G.SelectedIsland = "Starter Island"
+_G.SelectedBoss = "Gorilla King"
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local VirtualUser = game:GetService("VirtualUser")
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
 
--- ============================================================
---  GUI CREATION
--- ============================================================
+---------------------------------------------------------
+-- TAB 1: MAIN / FARMING
+---------------------------------------------------------
+local MainTab = window:AddTab("Main / Farm")
+MainTab:Show() -- Default open tab
 
-local function CreateUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "VanishHub"
-    ScreenGui.Parent = game:GetService("CoreGui")
-    ScreenGui.ResetOnSpawn = false
+MainTab:AddLabel("--- Auto Farming & Combat ---")
 
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Parent = ScreenGui
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-    MainFrame.BackgroundTransparency = 0.15
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Position = UDim2.new(0.5, -300, 0.5, -200)
-    MainFrame.Size = UDim2.new(0, 600, 0, 400)
-    MainFrame.ClipsDescendants = true
+MainTab:AddSwitch("Auto Farm Level", function(bool)
+    _G.AutoFarmLevel = bool
+end)
 
-    -- Drag functionality
-    local Dragging = false
-    local DragInput
-    local DragStart
-    local StartPos
+MainTab:AddSwitch("Fast Attack", function(bool)
+    _G.AutoFastAttack = bool
+end)
 
-    MainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Dragging = true
-            DragStart = input.Position
-            StartPos = MainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    Dragging = false
+MainTab:AddSwitch("Auto Chest Farm", function(bool)
+    _G.AutoChestFarm = bool
+end)
+
+MainTab:AddSwitch("Auto Collect Dropped Fruits", function(bool)
+    _G.AutoCollectFruits = bool
+end)
+
+MainTab:AddSwitch("Auto Enable Buso Haki", function(bool)
+    _G.AutoBusoHaki = bool
+end)
+
+MainTab:AddButton("Bring Nearest Enemies", function()
+    pcall(function()
+        local myPos = LocalPlayer.Character.HumanoidRootPart.Position
+        for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+            if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                if (enemy.HumanoidRootPart.Position - myPos).Magnitude < 300 then
+                    enemy.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+                end
+            end
+        end
+    end)
+end)
+
+---------------------------------------------------------
+-- TAB 2: BOSS & FRUIT UTILITIES
+---------------------------------------------------------
+local BossTab = window:AddTab("Boss & Fruits")
+BossTab:AddLabel("--- Boss Farming & Fruit Actions ---")
+
+local bossDropdown = BossTab:AddDropdown("Select Boss", function(text)
+    _G.SelectedBoss = text
+end)
+
+local bossList = {"Gorilla King", "Bobby", "Yeti", "Vice Admiral", "Swann", "Magma Admiral", "Fishman Lord", "Wysper", "Thunder God", "Cyborg"}
+for _, b in ipairs(bossList) do
+    bossDropdown:Add(b)
+end
+
+BossTab:AddSwitch("Auto Farm Selected Boss", function(bool)
+    _G.AutoBossFarm = bool
+end)
+
+BossTab:AddSwitch("Auto Store Fruits in Inventory", function(bool)
+    _G.AutoStoreFruits = bool
+end)
+
+BossTab:AddButton("Buy Random Fruit (Gacha)", function()
+    pcall(function()
+        ReplicatedStorage.Remotes.CommF_:InvokeServer("Cousin", "Buy")
+    end)
+end)
+
+---------------------------------------------------------
+-- TAB 3: AUTO STATS
+---------------------------------------------------------
+local StatsTab = window:AddTab("Auto Stats")
+StatsTab:AddLabel("--- Auto Allocate Points ---")
+
+StatsTab:AddSwitch("Auto Melee", function(bool)
+    _G.AutoStatsMelee = bool
+end)
+
+StatsTab:AddSwitch("Auto Defense", function(bool)
+    _G.AutoStatsDefense = bool
+end)
+
+StatsTab:AddSwitch("Auto Sword", function(bool)
+    _G.AutoStatsSword = bool
+end)
+
+StatsTab:AddSwitch("Auto Gun", function(bool)
+    _G.AutoStatsGun = bool
+end)
+
+StatsTab:AddSwitch("Auto Blox Fruit", function(bool)
+    _G.AutoStatsFruit = bool
+end)
+
+---------------------------------------------------------
+-- TAB 4: TELEPORTS
+---------------------------------------------------------
+local TeleportTab = window:AddTab("Teleports")
+TeleportTab:AddLabel("--- Island & World Teleports ---")
+
+local islandLocations = {
+    ["Starter Island"] = Vector3.new(1089, 16, 1402),
+    ["Jungle"] = Vector3.new(-1612, 36, 148),
+    ["Pirate Village"] = Vector3.new(-1182, 4, 3843),
+    ["Desert"] = Vector3.new(1094, 6, 4192),
+    ["Middle Town"] = Vector3.new(-690, 15, 1582),
+    ["Marine Ford"] = Vector3.new(-4915, 20, 4260),
+    ["Skypiea"] = Vector3.new(-4832, 717, -2622),
+    ["Colosseum"] = Vector3.new(-1428, 7, -2792),
+    ["Magma Village"] = Vector3.new(-5242, 8, 8527),
+    ["Underwater City"] = Vector3.new(61163, 11, 1819),
+    ["Fountain City"] = Vector3.new(5258, 38, 4050)
+}
+
+local islandDropdown = TeleportTab:AddDropdown("Select Island", function(text)
+    _G.SelectedIsland = text
+end)
+
+for name, _ in pairs(islandLocations) do
+    islandDropdown:Add(name)
+end
+
+TeleportTab:AddButton("Teleport to Selected Island", function()
+    if islandLocations[_G.SelectedIsland] and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(islandLocations[_G.SelectedIsland])
+    end
+end)
+
+TeleportTab:AddButton("Teleport to First Sea", function()
+    ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelMain")
+end)
+
+TeleportTab:AddButton("Teleport to Second Sea", function()
+    ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelDressrosa")
+end)
+
+TeleportTab:AddButton("Teleport to Third Sea", function()
+    ReplicatedStorage.Remotes.CommF_:InvokeServer("TravelZou")
+end)
+
+TeleportTab:AddButton("Safe Zone Sky Teleport", function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, 5000, 0)
+    end
+end)
+
+---------------------------------------------------------
+-- TAB 5: VISUALS & ESP
+---------------------------------------------------------
+local VisualsTab = window:AddTab("Visuals & ESP")
+VisualsTab:AddLabel("--- World Vision & ESP ---")
+
+VisualsTab:AddSwitch("Player ESP", function(bool)
+    _G.PlayerESP = bool
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            if bool then
+                local hl = Instance.new("Highlight")
+                hl.Name = "VanishPlayerESP"
+                hl.FillColor = Color3.fromRGB(138, 43, 226)
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                hl.Parent = plr.Character
+            else
+                if plr.Character:FindFirstChild("VanishPlayerESP") then
+                    plr.Character.VanishPlayerESP:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+VisualsTab:AddSwitch("Fruit ESP", function(bool)
+    _G.FruitESP = bool
+    for _, item in pairs(workspace:GetChildren()) do
+        if item:IsA("Tool") and string.find(item.Name, "Fruit") then
+            if bool then
+                local hl = Instance.new("Highlight")
+                hl.Name = "VanishFruitESP"
+                hl.FillColor = Color3.fromRGB(0, 255, 120)
+                hl.Parent = item
+            else
+                if item:FindFirstChild("VanishFruitESP") then
+                    item.VanishFruitESP:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+VisualsTab:AddSwitch("Chest ESP", function(bool)
+    _G.ChestESP = bool
+    for _, chest in pairs(workspace:GetDescendants()) do
+        if string.find(chest.Name, "Chest") and chest:IsA("BasePart") then
+            if bool then
+                local hl = Instance.new("Highlight")
+                hl.Name = "VanishChestESP"
+                hl.FillColor = Color3.fromRGB(255, 215, 0)
+                hl.Parent = chest
+            else
+                if chest:FindFirstChild("VanishChestESP") then
+                    chest.VanishChestESP:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+VisualsTab:AddSwitch("FullBright", function(bool)
+    _G.FullBright = bool
+    if bool then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    else
+        Lighting.Brightness = 1
+        Lighting.GlobalShadows = true
+    end
+end)
+
+VisualsTab:AddButton("Remove Fog", function()
+    Lighting.FogEnd = 9e9
+    for _, v in pairs(Lighting:GetChildren()) do
+        if v:IsA("Atmosphere") or v:IsA("PostEffect") then
+            v:Destroy()
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- TAB 6: PLAYER MODS & MOVEMENT
+---------------------------------------------------------
+local MiscTab = window:AddTab("Player Mods")
+MiscTab:AddLabel("--- Character Modifiers ---")
+
+local walkSlider = MiscTab:AddSlider("WalkSpeed", function(v)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = v
+    end
+end, { ["min"] = 16, ["max"] = 350 })
+walkSlider:Set(16)
+
+local jumpSlider = MiscTab:AddSlider("JumpPower", function(v)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.JumpPower = v
+    end
+end, { ["min"] = 50, ["max"] = 300 })
+jumpSlider:Set(50)
+
+MiscTab:AddSwitch("Infinite Energy", function(bool)
+    _G.InfiniteEnergy = bool
+end)
+
+MiscTab:AddSwitch("NoClip", function(bool)
+    _G.NoClip = bool
+end)
+
+MiscTab:AddSwitch("Infinite Jump", function(bool)
+    _G.InfiniteJump = bool
+end)
+
+MiscTab:AddSwitch("Water Walk", function(bool)
+    _G.WaterWalk = bool
+    if workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("WaterBoundary") then
+        workspace.Map.WaterBoundary.CanCollide = bool
+    end
+end)
+
+---------------------------------------------------------
+-- TAB 7: UTILITIES & ANTI-AFK
+---------------------------------------------------------
+local UtilityTab = window:AddTab("Utility & Anti-AFK")
+UtilityTab:AddLabel("--- Anti-AFK & Server Tools ---")
+
+-- Dedicated button loading your specific Anti-AFK repository script
+UtilityTab:AddButton("Execute Vanish Hub Anti-AFK", function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/XxDEMONxX-lab/Vanish-Hub-universel-anti-afk/refs/heads/main/Vanish%20Hub%20universel%20anti%20afk"))()
+    end)
+end)
+
+UtilityTab:AddButton("FPS Boost (Lag Reducer)", function()
+    pcall(function()
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and not v:IsA("MeshPart") then
+                v.Material = Enum.Material.SmoothPlastic
+            elseif v:IsA("Texture") or v:IsA("Decal") then
+                v:Destroy()
+            end
+        end
+    end)
+end)
+
+UtilityTab:AddButton("Rejoin Current Server", function()
+    game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+end)
+
+UtilityTab:AddButton("Server Hop", function()
+    local HttpService = game:GetService("HttpService")
+    local TeleportService = game:GetService("TeleportService")
+    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100"))
+    for _, s in pairs(servers.data) do
+        if s.playing ~= s.maxPlayers and s.id ~= game.JobId then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, LocalPlayer)
+            break
+        end
+    end
+end)
+
+---------------------------------------------------------
+-- LOOPS & BACKGROUND LOGIC
+---------------------------------------------------------
+
+-- Fast Attack Loop
+task.spawn(function()
+    while task.wait(0.1) do
+        if _G.AutoFastAttack then
+            pcall(function()
+                local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
                 end
             end)
         end
-    end)
-
-    MainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            DragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if input == DragInput and Dragging then
-            local Delta = input.Position - DragStart
-            MainFrame.Position = UDim2.new(
-                StartPos.X.Scale,
-                StartPos.X.Offset + Delta.X,
-                StartPos.Y.Scale,
-                StartPos.Y.Offset + Delta.Y
-            )
-        end
-    end)
-
-    -- Title
-    local Title = Instance.new("TextLabel")
-    Title.Parent = MainFrame
-    Title.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    Title.BackgroundTransparency = 0.3
-    Title.BorderSizePixel = 0
-    Title.Size = UDim2.new(1, 0, 0, 40)
-    Title.Font = Enum.Font.GothamBold
-    Title.Text = "Vanish Hub | Blox Fruits"
-    Title.TextColor3 = Color3.fromRGB(255, 200, 50)
-    Title.TextSize = 20
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.TextYAlignment = Enum.TextYAlignment.Center
-    Title.Padding = UDim.new(0, 10)
-
-    -- Close Button
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Parent = MainFrame
-    CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-    CloseBtn.BorderSizePixel = 0
-    CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.Text = "✕"
-    CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseBtn.TextSize = 16
-    CloseBtn.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-    end)
-
-    -- Minimize Button
-    local MinBtn = Instance.new("TextButton")
-    MinBtn.Parent = MainFrame
-    MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    MinBtn.BorderSizePixel = 0
-    MinBtn.Position = UDim2.new(1, -70, 0, 5)
-    MinBtn.Size = UDim2.new(0, 30, 0, 30)
-    MinBtn.Font = Enum.Font.GothamBold
-    MinBtn.Text = "─"
-    MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    MinBtn.TextSize = 20
-    local Minimized = false
-    MinBtn.MouseButton1Click:Connect(function()
-        Minimized = not Minimized
-        MainFrame:TweenSize(
-            Minimized and UDim2.new(0, 250, 0, 45) or UDim2.new(0, 600, 0, 400),
-            Enum.EasingDirection.Out,
-            Enum.EasingStyle.Quad,
-            0.3,
-            true
-        )
-        for _, v in pairs(MainFrame:GetChildren()) do
-            if v ~= Title and v ~= CloseBtn and v ~= MinBtn and not Minimized then
-                v.Visible = not Minimized
-            end
-        end
-    end)
-
-    -- Tab Buttons
-    local TabContainer = Instance.new("Frame")
-    TabContainer.Parent = MainFrame
-    TabContainer.BackgroundColor3 = Color3.fromRGB(25, 25, 40)
-    TabContainer.BackgroundTransparency = 0.5
-    TabContainer.BorderSizePixel = 0
-    TabContainer.Position = UDim2.new(0, 0, 0, 40)
-    TabContainer.Size = UDim2.new(1, 0, 0, 35)
-
-    local Tabs = {"Farm", "Combat", "Fruits", "Raid", "Race", "Teleport", "ESP", "Misc"}
-    local TabButtons = {}
-    local CurrentTab = "Farm"
-
-    local function CreateTabButton(name, xPos)
-        local btn = Instance.new("TextButton")
-        btn.Parent = TabContainer
-        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        btn.BackgroundTransparency = 0.5
-        btn.BorderSizePixel = 0
-        btn.Position = UDim2.new(0, xPos, 0, 2)
-        btn.Size = UDim2.new(0, 70, 0, 30)
-        btn.Font = Enum.Font.GothamSemibold
-        btn.Text = name
-        btn.TextColor3 = Color3.fromRGB(200, 200, 220)
-        btn.TextSize = 12
-        return btn
     end
+end)
 
-    for i, name in ipairs(Tabs) do
-        local btn = CreateTabButton(name, (i - 1) * 75 + 5)
-        TabButtons[name] = btn
-        btn.MouseButton1Click:Connect(function()
-            CurrentTab = name
-            for _, v in pairs(TabButtons) do
-                v.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-                v.TextColor3 = Color3.fromRGB(200, 200, 220)
-            end
-            btn.BackgroundColor3 = Color3.fromRGB(70, 70, 120)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            -- Hide all content frames
-            for _, v in pairs(MainFrame:GetChildren()) do
-                if v.Name == "ContentFrame" then
-                    v.Visible = false
+-- Auto Buso Haki Loop
+task.spawn(function()
+    while task.wait(2) do
+        if _G.AutoBusoHaki and LocalPlayer.Character and not LocalPlayer.Character:FindFirstChild("HasBuso") then
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("HasBuso")
+        end
+    end
+end)
+
+-- Auto Chest Farm Loop
+task.spawn(function()
+    while task.wait(0.3) do
+        if _G.AutoChestFarm then
+            for _, chest in pairs(workspace:GetDescendants()) do
+                if string.find(chest.Name, "Chest") and chest:IsA("BasePart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = chest.CFrame
+                    task.wait(0.2)
                 end
             end
-            -- Show selected content frame
-            local content = MainFrame:FindFirstChild(name .. "Content")
-            if content then content.Visible = true end
-        end)
-    end
-    -- Select first tab
-    TabButtons["Farm"]:MouseButton1Click:Fire()
-
-    -- ============================================================
-    --  CONTENT FRAMES
-    -- ============================================================
-
-    local function CreateContentFrame(name)
-        local frame = Instance.new("ScrollingFrame")
-        frame.Name = name .. "Content"
-        frame.Parent = MainFrame
-        frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-        frame.BackgroundTransparency = 0.3
-        frame.BorderSizePixel = 0
-        frame.Position = UDim2.new(0, 5, 0, 80)
-        frame.Size = UDim2.new(1, -10, 1, -85)
-        frame.CanvasSize = UDim2.new(0, 0, 0, 0)
-        frame.ScrollBarThickness = 6
-        frame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 80)
-        frame.Visible = false
-        frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-        local layout = Instance.new("UIListLayout")
-        layout.Parent = frame
-        layout.Padding = UDim.new(0, 6)
-        layout.SortOrder = Enum.SortOrder.LayoutOrder
-
-        return frame
-    end
-
-    -- Helper: Create toggle
-    local function CreateToggle(parent, label, default, callback)
-        local frame = Instance.new("Frame")
-        frame.Parent = parent
-        frame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-        frame.BackgroundTransparency = 0.5
-        frame.BorderSizePixel = 0
-        frame.Size = UDim2.new(1, -10, 0, 30)
-
-        local lbl = Instance.new("TextLabel")
-        lbl.Parent = frame
-        lbl.BackgroundTransparency = 1
-        lbl.Position = UDim2.new(0, 10, 0, 0)
-        lbl.Size = UDim2.new(0.7, 0, 1, 0)
-        lbl.Font = Enum.Font.Gotham
-        lbl.Text = label
-        lbl.TextColor3 = Color3.fromRGB(220, 220, 240)
-        lbl.TextSize = 13
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-        local btn = Instance.new("TextButton")
-        btn.Parent = frame
-        btn.BackgroundColor3 = default and Color3.fromRGB(60, 200, 80) or Color3.fromRGB(60, 60, 80)
-        btn.BorderSizePixel = 0
-        btn.Position = UDim2.new(0.85, 0, 0.15, 0)
-        btn.Size = UDim2.new(0, 40, 0, 20)
-        btn.Font = Enum.Font.GothamBold
-        btn.Text = default and "ON" or "OFF"
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextSize = 11
-
-        local state = default
-        btn.MouseButton1Click:Connect(function()
-            state = not state
-            btn.BackgroundColor3 = state and Color3.fromRGB(60, 200, 80) or Color3.fromRGB(60, 60, 80)
-            btn.Text = state and "ON" or "OFF"
-            if callback then callback(state) end
-        end)
-
-        return {
-            SetState = function(s)
-                state = s
-                btn.BackgroundColor3 = state and Color3.fromRGB(60, 200, 80) or Color3.fromRGB(60, 60, 80)
-                btn.Text = state and "ON" or "OFF"
-                if callback then callback(state) end
-            end,
-            GetState = function() return state end
-        }
-    end
-
-    -- Helper: Create button
-    local function CreateButton(parent, label, callback)
-        local btn = Instance.new("TextButton")
-        btn.Parent = parent
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
-        btn.BorderSizePixel = 0
-        btn.Size = UDim2.new(1, -10, 0, 30)
-        btn.Font = Enum.Font.Gotham
-        btn.Text = label
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextSize = 13
-        btn.MouseButton1Click:Connect(callback)
-        return btn
-    end
-
-    -- Helper: Create dropdown
-    local function CreateDropdown(parent, label, options, default, callback)
-        local frame = Instance.new("Frame")
-        frame.Parent = parent
-        frame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-        frame.BackgroundTransparency = 0.5
-        frame.BorderSizePixel = 0
-        frame.Size = UDim2.new(1, -10, 0, 30)
-
-        local lbl = Instance.new("TextLabel")
-        lbl.Parent = frame
-        lbl.BackgroundTransparency = 1
-        lbl.Position = UDim2.new(0, 10, 0, 0)
-        lbl.Size = UDim2.new(0.4, 0, 1, 0)
-        lbl.Font = Enum.Font.Gotham
-        lbl.Text = label
-        lbl.TextColor3 = Color3.fromRGB(220, 220, 240)
-        lbl.TextSize = 13
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-        local dropdown = Instance.new("TextButton")
-        dropdown.Parent = frame
-        dropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        dropdown.BorderSizePixel = 0
-        dropdown.Position = UDim2.new(0.45, 0, 0.05, 0)
-        dropdown.Size = UDim2.new(0.5, -10, 0, 26)
-        dropdown.Font = Enum.Font.Gotham
-        dropdown.Text = default or options[1]
-        dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-        dropdown.TextSize = 12
-
-        local selected = default or options[1]
-        dropdown.MouseButton1Click:Connect(function()
-            -- Simple cycle through options
-            local idx = table.find(options, selected) or 1
-            idx = idx % #options + 1
-            selected = options[idx]
-            dropdown.Text = selected
-            if callback then callback(selected) end
-        end)
-
-        return {
-            GetValue = function() return selected end,
-            SetValue = function(v)
-                if table.find(options, v) then
-                    selected = v
-                    dropdown.Text = v
-                    if callback then callback(v) end
-                end
-            end
-        }
-    end
-
-    -- ============================================================
-    --  FARM TAB
-    -- ============================================================
-
-    local FarmContent = CreateContentFrame("Farm")
-    FarmContent.Visible = true
-
-    local FarmToggle = CreateToggle(FarmContent, "🔄 Auto Farm", false, function(state)
-        _G.AutoFarm = state
-    end)
-
-    local FarmMethod = CreateDropdown(FarmContent, "Method", {"Quest", "Nearest", "Boss"}, "Quest")
-
-    CreateToggle(FarmContent, "⚡ Auto Attack", true, function(state)
-        _G.AutoAttack = state
-    end)
-
-    CreateToggle(FarmContent, "📦 Auto Collect Chests", false, function(state)
-        _G.AutoChest = state
-    end)
-
-    CreateButton(FarmContent, "📍 Bring Mobs To Me", function()
-        _G.BringMobs = true
-        task.wait(5)
-        _G.BringMobs = false
-    end)
-
-    -- ============================================================
-    --  COMBAT TAB
-    -- ============================================================
-
-    local CombatContent = CreateContentFrame("Combat")
-
-    local AimbotToggle = CreateToggle(CombatContent, "🎯 Aimbot / Silent Aim", false, function(state)
-        _G.Aimbot = state
-    end)
-
-    CreateDropdown(CombatContent, "Aimbot Mode", {"Nearest", "Lowest HP", "Cursor"}, "Nearest")
-
-    CreateToggle(CombatContent, "💀 Kill Aura", false, function(state)
-        _G.KillAura = state
-    end)
-
-    CreateToggle(CombatContent, "🛡️ Auto Block", false, function(state)
-        _G.AutoBlock = state
-    end)
-
-    CreateToggle(CombatContent, "🏃 Auto Dodge", false, function(state)
-        _G.AutoDodge = state
-    end)
-
-    -- ============================================================
-    --  FRUITS TAB
-    -- ============================================================
-
-    local FruitContent = CreateContentFrame("Fruits")
-
-    CreateToggle(FruitContent, "🍎 Fruit Notifier (ESP)", true, function(state)
-        _G.FruitESP = state
-    end)
-
-    CreateToggle(FruitContent, "🏃 Fruit Sniper (Auto-Collect)", false, function(state)
-        _G.FruitSniper = state
-    end)
-
-    CreateToggle(FruitContent, "🔄 Auto-Store Fruit", false, function(state)
-        _G.AutoStoreFruit = state
-    end)
-
-    CreateButton(FruitContent, "🗺️ Show All Fruit Locations", function()
-        _G.ShowFruits = true
-        task.wait(10)
-        _G.ShowFruits = false
-    end)
-
-    -- ============================================================
-    --  RAID TAB
-    -- ============================================================
-
-    local RaidContent = CreateContentFrame("Raid")
-
-    CreateToggle(RaidContent, "⚔️ Auto Raid", false, function(state)
-        _G.AutoRaid = state
-    end)
-
-    CreateDropdown(RaidContent, "Raid Type", {"Flame", "Ice", "Quake", "Buddha", "Dough"}, "Flame")
-
-    CreateToggle(RaidContent, "🔄 Auto Chip Farm", false, function(state)
-        _G.AutoChip = state
-    end)
-
-    CreateToggle(RaidContent, "👥 Auto Join Raid", false, function(state)
-        _G.AutoJoinRaid = state
-    end)
-
-    -- ============================================================
-    --  RACE TAB
-    -- ============================================================
-
-    local RaceContent = CreateContentFrame("Race")
-
-    CreateToggle(RaceContent, "🧬 Auto Race V4", false, function(state)
-        _G.AutoRaceV4 = state
-    end)
-
-    CreateToggle(RaceContent, "⚡ Auto Gear (Race V4)", false, function(state)
-        _G.AutoGear = state
-    end)
-
-    CreateButton(RaceContent, "📍 Teleport to Race NPC", function()
-        -- Simplified teleport
-        local npc = workspace:FindFirstChild("RaceNPC") or workspace:FindFirstChild("RaceGiver")
-        if npc and npc:FindFirstChild("HumanoidRootPart") then
-            RootPart.CFrame = npc.HumanoidRootPart.CFrame * CFrame.new(0, 5, 5)
         end
-    end)
+    end
+end)
 
-    CreateButton(RaceContent, "🔄 Reset Race (V4)", function()
-        _G.ResetRace = true
-        task.wait(3)
-        _G.ResetRace = false
-    end)
-
-    -- ============================================================
-    --  TELEPORT TAB
-    -- ============================================================
-
-    local TeleportContent = CreateContentFrame("Teleport")
-
-    local locations = {
-        "Jungle", "Pirate Village", "Desert", "Ice Island", "Sky Islands",
-        "Marine Fortress", "Graveyard", "Snow Mountain", "Hot and Cold",
-        "Mansion", "Great Tree", "Castle on the Sea", "Port Town", "Kingdom of Rose"
-    }
-
-    CreateDropdown(TeleportContent, "📍 Location", locations, "Jungle", function(val)
-        _G.TeleportTarget = val
-    end)
-
-    CreateButton(TeleportContent, "🚀 Teleport", function()
-        local target = _G.TeleportTarget or "Jungle"
-        -- Simplified teleport - find matching part
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.Name and string.find(string.lower(v.Name), string.lower(target)) then
-                RootPart.CFrame = v.CFrame * CFrame.new(0, 5, 0)
-                break
-            end
-        end
-    end)
-
-    CreateButton(TeleportContent, "📌 Teleport to Boss", function()
-        local bosses = {"Boss", "King", "Marine", "Don", "Diamond"}
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("Model") and v:FindFirstChild("Humanoid") then
-                for _, b in ipairs(bosses) do
-                    if string.find(string.lower(v.Name), string.lower(b)) then
-                        local hrp = v:FindFirstChild("HumanoidRootPart") or v.PrimaryPart
-                        if hrp then
-                            RootPart.CFrame = hrp.CFrame * CFrame.new(0, 5, 3)
-                            return
+-- Auto Boss Farm Loop
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoBossFarm and _G.SelectedBoss then
+            pcall(function()
+                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                    if enemy.Name == _G.SelectedBoss and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                            LocalPlayer.Character.HumanoidRootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
                         end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Store Fruits Loop
+task.spawn(function()
+    while task.wait(2) do
+        if _G.AutoStoreFruits then
+            pcall(function()
+                for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+                    if string.find(tool.Name, "Fruit") then
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("StoreFruit", tool.Name, tool)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Stats Loop
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoStatsMelee then
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Melee", 1)
+        end
+        if _G.AutoStatsDefense then
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Defense", 1)
+        end
+        if _G.AutoStatsSword then
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Sword", 1)
+        end
+        if _G.AutoStatsGun then
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Gun", 1)
+        end
+        if _G.AutoStatsFruit then
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Demon Fruit", 1)
+        end
+    end
+end)
+
+-- Infinite Energy Loop
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.InfiniteEnergy and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Energy") then
+            LocalPlayer.Character.Energy.Value = LocalPlayer.Character.Energy.MaxValue
+        end
+    end
+end)
+
+-- Infinite Jump Handling
+UserInputService.JumpRequest:Connect(function()
+    if _G.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    end
+end)
+
+-- Noclip Loop
+RunService.Stepped:Connect(function()
+    if _G.NoClip and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Auto Collect Dropped Fruit Loop
+task.spawn(function()
+    while task.wait(1) do
+        if _G.AutoCollectFruits then
+            for _, v in pairs(workspace:GetChildren()) do
+                if v:IsA("Tool") and string.find(v.Name, "Fruit") then
+                    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Handle") then
+                        v.Handle.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
                     end
                 end
             end
         end
-    end)
+    end
+end)
 
-    -- ============================================================
-    --  ESP TAB
-    -- ============================================================
-
-    local ESPContent = CreateContentFrame("ESP")
-
-    CreateToggle(ESPContent, "👤 Player ESP", true, function(state)
-        _G.PlayerESP = state
-    end)
-
-    CreateToggle(ESPContent, "🍎 Fruit ESP", true, function(state)
-        _G.FruitESP = state
-    end)
-
-    CreateToggle(ESPContent, "📦 Chest ESP", false, function(state)
-        _G.ChestESP = state
-    end)
-
-    CreateToggle(ESPContent, "👾 NPC ESP", false, function(state)
-        _G.NPCESP = state
-    end)
-
-    CreateToggle(ESPContent, "💀 Boss ESP", true, function(state)
-        _G.BossESP = state
-    end)
-
-    -- ============================================================
-    --  MISC TAB
-    -- ============================================================
-
-    local MiscContent = CreateContentFrame("Misc")
-
-    CreateToggle(MiscContent, "♾️ Infinite Energy", false, function(state)
-        _G.InfiniteEnergy = state
-    end)
+print("Vanish Hub | Blox Fruits loaded successfully!")
