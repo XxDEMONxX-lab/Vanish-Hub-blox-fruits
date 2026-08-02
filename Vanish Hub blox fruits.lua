@@ -1,10 +1,8 @@
 --[[
     ====================================================
-    VANISH HUB | BLOX FRUITS
+    VANISH HUB | BLOX FRUITS (FULL SCRIPT)
     UI Library: Elerium UI Library V2
-    Features: Auto Farm, Boss Farm, Fruit Gacha, Chest Farm,
-              Auto Stats, World Teleports, ESP, Character Mods,
-              and Integrated Anti-AFK
+    Credits: Made by XxDEMONxX
     ====================================================
 --]]
 
@@ -14,7 +12,7 @@ local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/memej
 -- Create Main Window
 local window = library:AddWindow("Vanish Hub | Blox Fruits", {
     main_color = Color3.fromRGB(138, 43, 226), -- Signature Purple Theme
-    min_size = Vector2.new(500, 380),
+    min_size = Vector2.new(520, 400),
     toggle_key = Enum.KeyCode.RightControl,
     can_resize = true,
 })
@@ -88,6 +86,30 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
+
+---------------------------------------------------------
+-- ACCURATE MOVEMENT / TWEENING UTILITY
+-- (Fixes random void teleports and erratic character movement)
+---------------------------------------------------------
+local currentTween = nil
+
+local function smoothMoveTo(targetCFrame, speed)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = LocalPlayer.Character.HumanoidRootPart
+        local distance = (hrp.Position - targetCFrame.Position).Magnitude
+        local duration = distance / (speed or 250)
+        
+        if currentTween then
+            currentTween:Cancel()
+        end
+
+        local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+        currentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+        currentTween:Play()
+        return currentTween
+    end
+end
 
 ---------------------------------------------------------
 -- TAB 1: MAIN / FARMING
@@ -99,14 +121,20 @@ MainTab:AddLabel("--- Auto Farming & Combat ---")
 
 MainTab:AddSwitch("Auto Farm Level", function(bool)
     _G.AutoFarmLevel = bool
+    if not bool and currentTween then
+        currentTween:Cancel()
+    end
 end)
 
 MainTab:AddSwitch("Fast Attack", function(bool)
     _G.AutoFastAttack = bool
 end)
 
-MainTab:AddSwitch("Auto Chest Farm", function(bool)
+MainTab:AddSwitch("Auto Chest Farm (Accurate)", function(bool)
     _G.AutoChestFarm = bool
+    if not bool and currentTween then
+        currentTween:Cancel()
+    end
 end)
 
 MainTab:AddSwitch("Auto Collect Dropped Fruits", function(bool)
@@ -147,6 +175,9 @@ end
 
 BossTab:AddSwitch("Auto Farm Selected Boss", function(bool)
     _G.AutoBossFarm = bool
+    if not bool and currentTween then
+        currentTween:Cancel()
+    end
 end)
 
 BossTab:AddSwitch("Auto Store Fruits in Inventory", function(bool)
@@ -214,8 +245,8 @@ for name, _ in pairs(islandLocations) do
 end
 
 TeleportTab:AddButton("Teleport to Selected Island", function()
-    if islandLocations[_G.SelectedIsland] and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(islandLocations[_G.SelectedIsland])
+    if islandLocations[_G.SelectedIsland] then
+        smoothMoveTo(CFrame.new(islandLocations[_G.SelectedIsland]), 300)
     end
 end)
 
@@ -232,9 +263,7 @@ TeleportTab:AddButton("Teleport to Third Sea", function()
 end)
 
 TeleportTab:AddButton("Safe Zone Sky Teleport", function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, 5000, 0)
-    end
+    smoothMoveTo(CFrame.new(0, 5000, 0), 300)
 end)
 
 ---------------------------------------------------------
@@ -365,7 +394,6 @@ end)
 local UtilityTab = window:AddTab("Utility & Anti-AFK")
 UtilityTab:AddLabel("--- Anti-AFK & Server Tools ---")
 
--- Dedicated button loading your specific Anti-AFK repository script
 UtilityTab:AddButton("Execute Vanish Hub Anti-AFK", function()
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/XxDEMONxX-lab/Vanish-Hub-universel-anti-afk/refs/heads/main/Vanish%20Hub%20universel%20anti%20afk"))()
@@ -401,7 +429,24 @@ UtilityTab:AddButton("Server Hop", function()
 end)
 
 ---------------------------------------------------------
--- LOOPS & BACKGROUND LOGIC
+-- TAB 8: CREDITS
+---------------------------------------------------------
+local CreditsTab = window:AddTab("Credits")
+CreditsTab:AddLabel("--- Vanish Hub Information ---")
+CreditsTab:AddLabel("Made by: XxDEMONxX")
+CreditsTab:AddLabel("UI Library: Elerium UI V2")
+CreditsTab:AddLabel("Target Game: Blox Fruits")
+CreditsTab:AddLabel("Version: 3.0 Final")
+
+CreditsTab:AddButton("Copy Creator Name", function()
+    if setclipboard then
+        setclipboard("XxDEMONxX")
+        print("Creator name copied to clipboard!")
+    end
+end)
+
+---------------------------------------------------------
+-- BACKGROUND LOOPS & LOGIC
 ---------------------------------------------------------
 
 -- Fast Attack Loop
@@ -427,14 +472,30 @@ task.spawn(function()
     end
 end)
 
--- Auto Chest Farm Loop
+-- Accurate Chest Farm Loop (Prevents Random Void Teleporting)
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.5) do
         if _G.AutoChestFarm then
-            for _, chest in pairs(workspace:GetDescendants()) do
-                if string.find(chest.Name, "Chest") and chest:IsA("BasePart") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    LocalPlayer.Character.HumanoidRootPart.CFrame = chest.CFrame
-                    task.wait(0.2)
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = LocalPlayer.Character.HumanoidRootPart
+                local closestChest = nil
+                local shortestDistance = math.huge
+
+                for _, chest in pairs(workspace:GetDescendants()) do
+                    if string.find(chest.Name, "Chest") and chest:IsA("BasePart") then
+                        local dist = (hrp.Position - chest.Position).Magnitude
+                        if dist < shortestDistance then
+                            shortestDistance = dist
+                            closestChest = chest
+                        end
+                    end
+                end
+
+                if closestChest then
+                    local tween = smoothMoveTo(closestChest.CFrame, 220)
+                    if tween then
+                        tween.Completed:Wait()
+                    end
                 end
             end
         end
@@ -449,7 +510,7 @@ task.spawn(function()
                 for _, enemy in pairs(workspace.Enemies:GetChildren()) do
                     if enemy.Name == _G.SelectedBoss and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
                         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            LocalPlayer.Character.HumanoidRootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4)
+                            smoothMoveTo(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4), 250)
                         end
                     end
                 end
@@ -503,14 +564,14 @@ task.spawn(function()
     end
 end)
 
--- Infinite Jump Handling
+-- Infinite Jump Request
 UserInputService.JumpRequest:Connect(function()
     if _G.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
         LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
     end
 end)
 
--- Noclip Loop
+-- Noclip Stepped Loop
 RunService.Stepped:Connect(function()
     if _G.NoClip and LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -528,7 +589,7 @@ task.spawn(function()
             for _, v in pairs(workspace:GetChildren()) do
                 if v:IsA("Tool") and string.find(v.Name, "Fruit") then
                     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Handle") then
-                        v.Handle.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame
+                        smoothMoveTo(v.Handle.CFrame, 250)
                     end
                 end
             end
@@ -536,4 +597,4 @@ task.spawn(function()
     end
 end)
 
-print("Vanish Hub | Blox Fruits loaded successfully!")
+print("Vanish Hub | Blox Fruits full script loaded successfully!")
