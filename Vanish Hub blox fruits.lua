@@ -1,6 +1,6 @@
 --[[
     ====================================================
-    VANISH HUB | BLOX FRUITS (FULL SCRIPT)
+    VANISH HUB | BLOX FRUITS (ACCURATE FIXED VERSION)
     UI Library: Elerium UI Library V2
     Credits: Made by XxDEMONxX
     ====================================================
@@ -11,8 +11,8 @@ local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/memej
 
 -- Create Main Window
 local window = library:AddWindow("Vanish Hub | Blox Fruits", {
-    main_color = Color3.fromRGB(138, 43, 226), -- Signature Purple Theme
-    min_size = Vector2.new(520, 400),
+    main_color = Color3.fromRGB(138, 43, 226),
+    min_size = Vector2.new(520, 420),
     toggle_key = Enum.KeyCode.RightControl,
     can_resize = true,
 })
@@ -43,7 +43,6 @@ ToggleButton.Draggable = true
 UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = ToggleButton
 
--- Minimize/Maximize Trigger
 ToggleButton.MouseButton1Click:Connect(function()
     local vim = game:GetService("VirtualInputManager")
     vim:SendKeyEvent(true, Enum.KeyCode.RightControl, false, game)
@@ -51,7 +50,7 @@ ToggleButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------------------------------------
--- GLOBAL VARIABLES & SERVICES
+-- GLOBAL ACCURATE VARIABLES & SERVICES
 ---------------------------------------------------------
 _G.AutoFarmLevel = false
 _G.AutoFastAttack = false
@@ -77,6 +76,11 @@ _G.InfiniteJump = false
 _G.WaterWalk = false
 _G.FullBright = false
 
+_G.WalkSpeedToggle = false
+_G.WalkSpeedValue = 16
+_G.JumpPowerToggle = false
+_G.JumpPowerValue = 50
+
 _G.SelectedIsland = "Starter Island"
 _G.SelectedBoss = "Gorilla King"
 
@@ -89,8 +93,7 @@ local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 
 ---------------------------------------------------------
--- ACCURATE MOVEMENT / TWEENING UTILITY
--- (Fixes random void teleports and erratic character movement)
+-- ACCURATE TWEEN & HELPER FUNCTIONS
 ---------------------------------------------------------
 local currentTween = nil
 
@@ -98,6 +101,7 @@ local function smoothMoveTo(targetCFrame, speed)
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = LocalPlayer.Character.HumanoidRootPart
         local distance = (hrp.Position - targetCFrame.Position).Magnitude
+        if distance < 5 then return end -- already close
         local duration = distance / (speed or 250)
         
         if currentTween then
@@ -111,11 +115,25 @@ local function smoothMoveTo(targetCFrame, speed)
     end
 end
 
+local function autoEquipWeapon()
+    pcall(function()
+        if LocalPlayer.Character and not LocalPlayer.Character:FindFirstChildOfClass("Tool") then
+            local backpack = LocalPlayer:FindFirstChild("Backpack")
+            if backpack then
+                local tool = backpack:FindFirstChildOfClass("Tool")
+                if tool then
+                    LocalPlayer.Character.Humanoid:EquipTool(tool)
+                end
+            end
+        end
+    end)
+end
+
 ---------------------------------------------------------
 -- TAB 1: MAIN / FARMING
 ---------------------------------------------------------
 local MainTab = window:AddTab("Main / Farm")
-MainTab:Show() -- Default open tab
+MainTab:Show()
 
 MainTab:AddLabel("--- Auto Farming & Combat ---")
 
@@ -126,7 +144,7 @@ MainTab:AddSwitch("Auto Farm Level", function(bool)
     end
 end)
 
-MainTab:AddSwitch("Fast Attack", function(bool)
+MainTab:AddSwitch("Fast Attack (Auto Click)", function(bool)
     _G.AutoFastAttack = bool
 end)
 
@@ -137,7 +155,7 @@ MainTab:AddSwitch("Auto Chest Farm (Accurate)", function(bool)
     end
 end)
 
-MainTab:AddSwitch("Auto Collect Dropped Fruits", function(bool)
+MainTab:AddSwitch("Auto Collect Fruits", function(bool)
     _G.AutoCollectFruits = bool
 end)
 
@@ -147,11 +165,16 @@ end)
 
 MainTab:AddButton("Bring Nearest Enemies", function()
     pcall(function()
-        local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-        for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-            if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                if (enemy.HumanoidRootPart.Position - myPos).Magnitude < 300 then
-                    enemy.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local myPos = LocalPlayer.Character.HumanoidRootPart.Position
+            if workspace:FindFirstChild("Enemies") then
+                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                    if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                        if (enemy.HumanoidRootPart.Position - myPos).Magnitude < 350 then
+                            enemy.HumanoidRootPart.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -5)
+                            enemy.HumanoidRootPart.CanCollide = false
+                        end
+                    end
                 end
             end
         end
@@ -274,57 +297,14 @@ VisualsTab:AddLabel("--- World Vision & ESP ---")
 
 VisualsTab:AddSwitch("Player ESP", function(bool)
     _G.PlayerESP = bool
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            if bool then
-                local hl = Instance.new("Highlight")
-                hl.Name = "VanishPlayerESP"
-                hl.FillColor = Color3.fromRGB(138, 43, 226)
-                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-                hl.Parent = plr.Character
-            else
-                if plr.Character:FindFirstChild("VanishPlayerESP") then
-                    plr.Character.VanishPlayerESP:Destroy()
-                end
-            end
-        end
-    end
 end)
 
 VisualsTab:AddSwitch("Fruit ESP", function(bool)
     _G.FruitESP = bool
-    for _, item in pairs(workspace:GetChildren()) do
-        if item:IsA("Tool") and string.find(item.Name, "Fruit") then
-            if bool then
-                local hl = Instance.new("Highlight")
-                hl.Name = "VanishFruitESP"
-                hl.FillColor = Color3.fromRGB(0, 255, 120)
-                hl.Parent = item
-            else
-                if item:FindFirstChild("VanishFruitESP") then
-                    item.VanishFruitESP:Destroy()
-                end
-            end
-        end
-    end
 end)
 
 VisualsTab:AddSwitch("Chest ESP", function(bool)
     _G.ChestESP = bool
-    for _, chest in pairs(workspace:GetDescendants()) do
-        if string.find(chest.Name, "Chest") and chest:IsA("BasePart") then
-            if bool then
-                local hl = Instance.new("Highlight")
-                hl.Name = "VanishChestESP"
-                hl.FillColor = Color3.fromRGB(255, 215, 0)
-                hl.Parent = chest
-            else
-                if chest:FindFirstChild("VanishChestESP") then
-                    chest.VanishChestESP:Destroy()
-                end
-            end
-        end
-    end
 end)
 
 VisualsTab:AddSwitch("FullBright", function(bool)
@@ -350,23 +330,40 @@ VisualsTab:AddButton("Remove Fog", function()
 end)
 
 ---------------------------------------------------------
--- TAB 6: PLAYER MODS & MOVEMENT
+-- TAB 6: PLAYER MODS (ACCURATE SLIDABLE WALKSPEED & JUMPPOWER)
 ---------------------------------------------------------
 local MiscTab = window:AddTab("Player Mods")
 MiscTab:AddLabel("--- Character Modifiers ---")
 
-local walkSlider = MiscTab:AddSlider("WalkSpeed", function(v)
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = v
+MiscTab:AddSwitch("Enable Custom WalkSpeed", function(bool)
+    _G.WalkSpeedToggle = bool
+    if not bool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = 16
+    end
+end)
+
+local walkSlider = MiscTab:AddSlider("WalkSpeed Value", function(v)
+    _G.WalkSpeedValue = tonumber(v) or 16
+    if _G.WalkSpeedToggle and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = _G.WalkSpeedValue
     end
 end, { ["min"] = 16, ["max"] = 350 })
 walkSlider:Set(16)
 
-local jumpSlider = MiscTab:AddSlider("JumpPower", function(v)
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.JumpPower = v
+MiscTab:AddSwitch("Enable Custom JumpPower", function(bool)
+    _G.JumpPowerToggle = bool
+    if not bool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.JumpPower = 50
     end
-end, { ["min"] = 50, ["max"] = 300 })
+end)
+
+local jumpSlider = MiscTab:AddSlider("JumpPower Value", function(v)
+    _G.JumpPowerValue = tonumber(v) or 50
+    if _G.JumpPowerToggle and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.UseJumpPower = true
+        LocalPlayer.Character.Humanoid.JumpPower = _G.JumpPowerValue
+    end
+end, { ["min"] = 50, ["max"] = 350 })
 jumpSlider:Set(50)
 
 MiscTab:AddSwitch("Infinite Energy", function(bool)
@@ -436,7 +433,7 @@ CreditsTab:AddLabel("--- Vanish Hub Information ---")
 CreditsTab:AddLabel("Made by: XxDEMONxX")
 CreditsTab:AddLabel("UI Library: Elerium UI V2")
 CreditsTab:AddLabel("Target Game: Blox Fruits")
-CreditsTab:AddLabel("Version: 3.0 Final")
+CreditsTab:AddLabel("Version: 4.0 Accurate")
 
 CreditsTab:AddButton("Copy Creator Name", function()
     if setclipboard then
@@ -446,17 +443,117 @@ CreditsTab:AddButton("Copy Creator Name", function()
 end)
 
 ---------------------------------------------------------
--- BACKGROUND LOOPS & LOGIC
+-- BACKGROUND LOOPS & ACCURATE REPEAT HANDLERS
 ---------------------------------------------------------
 
--- Fast Attack Loop
+-- Continuous Speed & Jump Enforcement Loop
+RunService.RenderStepped:Connect(function()
+    pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            local hum = LocalPlayer.Character.Humanoid
+            if _G.WalkSpeedToggle then
+                hum.WalkSpeed = _G.WalkSpeedValue
+            end
+            if _G.JumpPowerToggle then
+                hum.UseJumpPower = true
+                hum.JumpPower = _G.JumpPowerValue
+            end
+        end
+    end)
+end)
+
+-- Auto Fast Attack & Auto Click
 task.spawn(function()
     while task.wait(0.1) do
         if _G.AutoFastAttack then
             pcall(function()
+                autoEquipWeapon()
                 local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
                 if tool then
                     tool:Activate()
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Level Farm (Accurate Mob Farming)
+task.spawn(function()
+    while task.wait(0.3) do
+        if _G.AutoFarmLevel then
+            pcall(function()
+                if workspace:FindFirstChild("Enemies") then
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                autoEquipWeapon()
+                                enemy.HumanoidRootPart.CanCollide = false
+                                -- Position directly above mob for safe auto farming
+                                LocalPlayer.Character.HumanoidRootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0)
+                                if _G.AutoFastAttack == false then
+                                    local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                                    if tool then tool:Activate() end
+                                end
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Chest Farm (Accurate Distance Check & Safe Touch)
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoChestFarm then
+            pcall(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local hrp = LocalPlayer.Character.HumanoidRootPart
+                    local closestChest = nil
+                    local shortestDist = math.huge
+
+                    for _, chest in pairs(workspace:GetDescendants()) do
+                        if string.find(chest.Name, "Chest") and chest:IsA("BasePart") and chest:FindFirstChild("TouchInterest") then
+                            local dist = (hrp.Position - chest.Position).Magnitude
+                            if dist < shortestDist then
+                                shortestDist = dist
+                                closestChest = chest
+                            end
+                        end
+                    end
+
+                    if closestChest then
+                        local tween = smoothMoveTo(closestChest.CFrame, 220)
+                        if tween then
+                            tween.Completed:Wait()
+                            firetouchinterest(hrp, closestChest, 0)
+                            firetouchinterest(hrp, closestChest, 1)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Boss Farm
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoBossFarm and _G.SelectedBoss then
+            pcall(function()
+                if workspace:FindFirstChild("Enemies") then
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy.Name == _G.SelectedBoss and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                                autoEquipWeapon()
+                                LocalPlayer.Character.HumanoidRootPart.CFrame = enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0)
+                                local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+                                if tool then tool:Activate() end
+                            end
+                        end
+                    end
                 end
             end)
         end
@@ -472,54 +569,7 @@ task.spawn(function()
     end
 end)
 
--- Accurate Chest Farm Loop (Prevents Random Void Teleporting)
-task.spawn(function()
-    while task.wait(0.5) do
-        if _G.AutoChestFarm then
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local hrp = LocalPlayer.Character.HumanoidRootPart
-                local closestChest = nil
-                local shortestDistance = math.huge
-
-                for _, chest in pairs(workspace:GetDescendants()) do
-                    if string.find(chest.Name, "Chest") and chest:IsA("BasePart") then
-                        local dist = (hrp.Position - chest.Position).Magnitude
-                        if dist < shortestDistance then
-                            shortestDistance = dist
-                            closestChest = chest
-                        end
-                    end
-                end
-
-                if closestChest then
-                    local tween = smoothMoveTo(closestChest.CFrame, 220)
-                    if tween then
-                        tween.Completed:Wait()
-                    end
-                end
-            end
-        end
-    end
-end)
-
--- Auto Boss Farm Loop
-task.spawn(function()
-    while task.wait(0.5) do
-        if _G.AutoBossFarm and _G.SelectedBoss then
-            pcall(function()
-                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                    if enemy.Name == _G.SelectedBoss and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                            smoothMoveTo(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 0, 4), 250)
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
--- Auto Store Fruits Loop
+-- Auto Store Fruits
 task.spawn(function()
     while task.wait(2) do
         if _G.AutoStoreFruits then
@@ -551,6 +601,66 @@ task.spawn(function()
         end
         if _G.AutoStatsFruit then
             ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Demon Fruit", 1)
+        end
+    end
+end)
+
+-- ESP Refresh Loop
+task.spawn(function()
+    while task.wait(2) do
+        -- Player ESP
+        if _G.PlayerESP then
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character and not plr.Character:FindFirstChild("VanishPlayerESP") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "VanishPlayerESP"
+                    hl.FillColor = Color3.fromRGB(138, 43, 226)
+                    hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    hl.Parent = plr.Character
+                end
+            end
+        else
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr.Character and plr.Character:FindFirstChild("VanishPlayerESP") then
+                    plr.Character.VanishPlayerESP:Destroy()
+                end
+            end
+        end
+
+        -- Fruit ESP
+        if _G.FruitESP then
+            for _, item in pairs(workspace:GetChildren()) do
+                if item:IsA("Tool") and string.find(item.Name, "Fruit") and not item:FindFirstChild("VanishFruitESP") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "VanishFruitESP"
+                    hl.FillColor = Color3.fromRGB(0, 255, 120)
+                    hl.Parent = item
+                end
+            end
+        else
+            for _, item in pairs(workspace:GetChildren()) do
+                if item:FindFirstChild("VanishFruitESP") then
+                    item.VanishFruitESP:Destroy()
+                end
+            end
+        end
+
+        -- Chest ESP
+        if _G.ChestESP then
+            for _, chest in pairs(workspace:GetDescendants()) do
+                if string.find(chest.Name, "Chest") and chest:IsA("BasePart") and not chest:FindFirstChild("VanishChestESP") then
+                    local hl = Instance.new("Highlight")
+                    hl.Name = "VanishChestESP"
+                    hl.FillColor = Color3.fromRGB(255, 215, 0)
+                    hl.Parent = chest
+                end
+            end
+        else
+            for _, chest in pairs(workspace:GetDescendants()) do
+                if chest:FindFirstChild("VanishChestESP") then
+                    chest.VanishChestESP:Destroy()
+                end
+            end
         end
     end
 end)
@@ -597,4 +707,4 @@ task.spawn(function()
     end
 end)
 
-print("Vanish Hub | Blox Fruits full script loaded successfully!")
+print("Vanish Hub | Blox Fruits (Accurate V4) loaded successfully!")
